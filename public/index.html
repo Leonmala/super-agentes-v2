@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Super Agentes - Teste 6</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f5;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      background: #4a90d9;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 1.2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .aluno-info {
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+
+    .chat-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      max-width: 800px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .mensagem {
+      margin-bottom: 1rem;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .mensagem.aluno {
+      align-items: flex-end;
+    }
+
+    .mensagem.agente {
+      align-items: flex-start;
+    }
+
+    .badge {
+      font-size: 0.7rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 10px;
+      margin-bottom: 0.3rem;
+      font-weight: bold;
+    }
+
+    .mensagem.aluno .badge {
+      background: #4a90d9;
+      color: white;
+    }
+
+    .mensagem.agente .badge {
+      background: #e0e0e0;
+      color: #333;
+    }
+
+    .conteudo {
+      max-width: 70%;
+      padding: 0.8rem 1rem;
+      border-radius: 12px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+
+    .mensagem.aluno .conteudo {
+      background: #4a90d9;
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+
+    .mensagem.agente .conteudo {
+      background: white;
+      color: #333;
+      border: 1px solid #e0e0e0;
+      border-bottom-left-radius: 4px;
+    }
+
+    .input-container {
+      background: white;
+      padding: 1rem;
+      border-top: 1px solid #e0e0e0;
+      display: flex;
+      gap: 0.5rem;
+      max-width: 800px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    #mensagem-input {
+      flex: 1;
+      padding: 0.8rem 1rem;
+      border: 1px solid #ddd;
+      border-radius: 20px;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    #mensagem-input:focus {
+      border-color: #4a90d9;
+    }
+
+    #btn-enviar {
+      background: #4a90d9;
+      color: white;
+      border: none;
+      padding: 0.8rem 1.5rem;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: bold;
+    }
+
+    #btn-enviar:hover {
+      background: #3a7bc8;
+    }
+
+    #btn-enviar:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 1rem;
+      color: #666;
+      font-style: italic;
+    }
+
+    .erro {
+      background: #ffebee;
+      color: #c62828;
+      padding: 0.8rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🦸‍♂️ Super Agentes</h1>
+    <div class="aluno-info">Aluno: João (TESTE001) | 3º ano</div>
+  </div>
+
+  <div class="chat-container" id="chat">
+    <div class="mensagem agente">
+      <span class="badge">PSICOPEDAGOGICO</span>
+      <div class="conteudo">Oi! Sou o PSICOPEDAGOGICO, seu primeiro contato com os Super Agentes! 😊 Me conta, com o que você precisa de ajuda hoje?</div>
+    </div>
+  </div>
+
+  <div class="input-container">
+    <input
+      type="text"
+      id="mensagem-input"
+      placeholder="Digite sua mensagem..."
+      autocomplete="off"
+    />
+    <button id="btn-enviar">Enviar</button>
+  </div>
+
+  <script>
+    const ALUNO_ID = 'TESTE001';
+    const chat = document.getElementById('chat');
+    const input = document.getElementById('mensagem-input');
+    const btnEnviar = document.getElementById('btn-enviar');
+
+    // Estado de streaming ativo
+    let msgStreamAtual = null;
+    let conteudoStreamAtual = null;
+    let badgeStreamAtual = null;
+
+    function adicionarMensagem(texto, tipo, agente = null) {
+      const div = document.createElement('div');
+      div.className = `mensagem ${tipo}`;
+
+      if (agente) {
+        const badge = document.createElement('span');
+        badge.className = 'badge';
+        badge.textContent = agente;
+        div.appendChild(badge);
+      }
+
+      const conteudo = document.createElement('div');
+      conteudo.className = 'conteudo';
+      conteudo.textContent = texto;
+      div.appendChild(conteudo);
+
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+      return div;
+    }
+
+    // Cria uma bolha de agente vazia, pronta para receber chunks
+    function iniciarMensagemStream(agente) {
+      removerLoading();
+
+      const div = document.createElement('div');
+      div.className = 'mensagem agente';
+
+      const badge = document.createElement('span');
+      badge.className = 'badge';
+      badge.textContent = agente || '...';
+      div.appendChild(badge);
+
+      const conteudo = document.createElement('div');
+      conteudo.className = 'conteudo';
+      conteudo.textContent = '';
+      div.appendChild(conteudo);
+
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+
+      msgStreamAtual = div;
+      conteudoStreamAtual = conteudo;
+      badgeStreamAtual = badge;
+    }
+
+    // Adiciona texto à bolha de stream em andamento
+    function adicionarChunk(texto) {
+      if (!conteudoStreamAtual) {
+        // Fallback: criar bolha se ainda não existe
+        iniciarMensagemStream('...');
+      }
+      conteudoStreamAtual.textContent += texto;
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    // Atualiza o badge quando o agente final é conhecido
+    function atualizarBadgeStream(agente) {
+      if (badgeStreamAtual) {
+        badgeStreamAtual.textContent = agente;
+      }
+    }
+
+    // Finaliza a bolha de stream (remove cursor piscante se houver)
+    function finalizarMensagemStream() {
+      msgStreamAtual = null;
+      conteudoStreamAtual = null;
+      badgeStreamAtual = null;
+    }
+
+    function mostrarLoading() {
+      const div = document.createElement('div');
+      div.className = 'loading';
+      div.id = 'loading-indicator';
+      div.textContent = 'Super Agente está pensando...';
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function removerLoading() {
+      const loading = document.getElementById('loading-indicator');
+      if (loading) loading.remove();
+    }
+
+    async function enviarMensagem() {
+      const texto = input.value.trim();
+      if (!texto) return;
+
+      // Adicionar mensagem do aluno
+      adicionarMensagem(texto, 'aluno', 'Você');
+      input.value = '';
+      btnEnviar.disabled = true;
+      mostrarLoading();
+
+      try {
+        // POST normal — o servidor responde com SSE no body
+        const response = await fetch('/api/message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ aluno_id: ALUNO_ID, mensagem: texto })
+        });
+
+        if (!response.ok) {
+          const erro = await response.json().catch(() => ({ erro: 'Erro desconhecido' }));
+          throw new Error(erro.erro || 'Erro desconhecido');
+        }
+
+        // Ler stream SSE manualmente via ReadableStream
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          // Processar linhas completas do protocolo SSE
+          const linhas = buffer.split('\n');
+          buffer = linhas.pop(); // última linha pode estar incompleta
+
+          let eventoAtual = null;
+          let dadosAtual = null;
+
+          for (const linha of linhas) {
+            if (linha.startsWith('event: ')) {
+              eventoAtual = linha.slice(7).trim();
+            } else if (linha.startsWith('data: ')) {
+              dadosAtual = linha.slice(6).trim();
+            } else if (linha === '' && eventoAtual && dadosAtual) {
+              // Evento completo
+              try {
+                const dados = JSON.parse(dadosAtual);
+                processarEvento(eventoAtual, dados);
+              } catch (e) {
+                console.warn('Erro ao parsear evento SSE:', dadosAtual);
+              }
+              eventoAtual = null;
+              dadosAtual = null;
+            }
+          }
+        }
+
+      } catch (erro) {
+        removerLoading();
+        finalizarMensagemStream();
+        const div = document.createElement('div');
+        div.className = 'erro';
+        div.textContent = `Erro: ${erro.message}`;
+        chat.appendChild(div);
+        chat.scrollTop = chat.scrollHeight;
+      } finally {
+        btnEnviar.disabled = false;
+        input.focus();
+      }
+    }
+
+    function processarEvento(evento, dados) {
+      switch (evento) {
+        case 'agente':
+          // Sabe qual agente vai responder — cria bolha vazia ou atualiza badge
+          if (!conteudoStreamAtual) {
+            iniciarMensagemStream(dados.agente);
+          } else {
+            atualizarBadgeStream(dados.agente);
+          }
+          break;
+
+        case 'chunk':
+          // Fragmento de texto — adicionar à bolha
+          if (!conteudoStreamAtual) {
+            iniciarMensagemStream('...');
+          }
+          adicionarChunk(dados.texto);
+          break;
+
+        case 'done':
+          // Resposta completa — atualizar badge com agente final e liberar input
+          atualizarBadgeStream(dados.agente);
+          finalizarMensagemStream();
+          // Exibir métricas no console para análise
+          if (dados.metricas) {
+            console.group(`📊 Métricas — turno ${dados.turno}`);
+            console.log(`Tempo total: ${dados.metricas.tempo_total_ms}ms`);
+            console.log(`Tokens: ${dados.metricas.tokens_total}`);
+            console.log(`Cascata: ${dados.metricas.houve_cascata}`);
+            if (dados.metricas.chamadas) {
+              dados.metricas.chamadas.forEach(c => {
+                console.log(`  ${c.persona}: ${c.tempo_ms}ms | in:${c.tokens_input} out:${c.tokens_output}`);
+              });
+            }
+            console.groupEnd();
+          }
+          break;
+
+        case 'error':
+          removerLoading();
+          finalizarMensagemStream();
+          const div = document.createElement('div');
+          div.className = 'erro';
+          div.textContent = `Erro: ${dados.erro}`;
+          chat.appendChild(div);
+          chat.scrollTop = chat.scrollHeight;
+          break;
+      }
+    }
+
+    btnEnviar.addEventListener('click', enviarMensagem);
+    input.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') enviarMensagem();
+    });
+
+    // Focar no input ao carregar
+    input.focus();
+  </script>
+</body>
+</html>

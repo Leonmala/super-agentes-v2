@@ -1,0 +1,61 @@
+{
+  "version": "1.0.0",
+  "name": "Node.js Quality Check Hook — Super Agentes",
+  "description": "Quality checks for Node.js TypeScript (Express + Gemini + Supabase)",
+  "projectType": "node-typescript",
+  "typescript": {
+    "enabled": true,
+    "showDependencyErrors": false
+  },
+  "eslint": {
+    "enabled": true,
+    "autofix": true
+  },
+  "prettier": {
+    "enabled": true,
+    "autofix": true
+  },
+  "general": {
+    "autofixSilent": true,
+    "debug": false
+  },
+  "rules": {
+    "console": {
+      "enabled": false,
+      "severity": "info",
+      "message": "Console é aceitável — métricas e logs do servidor são intencionais"
+    },
+    "asAny": {
+      "enabled": true,
+      "severity": "warning",
+      "message": "Prefira tipos corretos ou 'as unknown' para type assertions"
+    },
+    "debugger": {
+      "enabled": true,
+      "severity": "error",
+      "message": "Remova debugger antes de commitar"
+    },
+    "todos": {
+      "enabled": true,
+      "severity": "info",
+      "patterns": ["TODO", "FIXME", "HACK"]
+    }
+  },
+  "fileTypes": {
+    "server": {
+      "patterns": ["index.ts", "router.ts", "llm.ts", "context.ts", "persistence.ts", "metrics.ts", "supabase.ts"],
+      "paths": ["src/"]
+    }
+  },
+  "ignore": {
+    "paths": [
+      "node_modules/",
+      "dist/",
+      "public/",
+      "personas/",
+      "supabase/",
+      "*.config.js",
+      "*.config.ts"
+    ]
+  }
+}
